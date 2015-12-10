@@ -1,0 +1,47 @@
+<!-- snippet to render and manage the common record config. -->
+<script type="text/javascript">
+
+    var recordConfig = {};
+
+    // Load the record config into the form
+    function loadRecordConfig(config) {
+        recordConfig = config;
+        $('.cfg-enable-toggle').html(widgets.widgetOnOffToggle(recordConfig.enabled));
+        if (recordConfig.count_remaining !== null) {
+            $('#cfg-count-remaining').val(recordConfig.count_remaining);
+        }
+        else {
+            $('#cfg-count-remaining').val(-1);
+        }
+    }
+
+    // Get the record config
+    function getRecordConfig() {
+        return recordConfig;
+    }
+
+    // Enable clicked
+    function enableClicked() {
+        recordConfig.enabled = !recordConfig.enabled;
+        $('.cfg-enable-toggle').html(widgets.widgetOnOffToggle(recordConfig.enabled));
+    }
+
+    // count remaining updated
+    function countUpdated(count) {
+        if (count < 0) {
+            // disable count
+            recordConfig.count_remaining = null;
+        }
+        else {
+            recordConfig.count_remaining = Number(count);
+        }
+    }
+
+</script>
+
+<div class="record-config">
+    <ul>
+        <li>Enable: <span class="cfg-enable-toggle" onclick="enableClicked()"></span></li>
+        <li>Count remaining: <input type="number" id="cfg-count-remaining" onchange="countUpdated(this.value)"/></li>
+    </ul>
+</div>

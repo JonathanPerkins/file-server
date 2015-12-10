@@ -1,0 +1,116 @@
+body {
+  padding: 50px;
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+}
+
+a {
+  color: #00B7FF;
+}
+
+/* Widget colours */
+.widget-enable {
+	color: #00C030;
+}
+.widget-trash {
+    text-align: center;
+	color: #d00;
+}
+.widget-greyed-out {
+    color: #aaa;
+}
+
+/* Menu bar */
+#menu_bar {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: center;
+}
+
+.menu_bar_category {
+    flex-grow: 0;
+    list-style-type: none;
+    margin: 0;
+    margin-left: 10px;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    padding: 5px;
+    background-color: #f8f8f8;
+}
+
+.menu_bar_category_title {
+    margin: 0;
+    padding: 0;
+    text-align: center;
+}
+
+.menu_bar_items {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+.menu_bar_items li {
+    display:inline;
+}
+.menu_bar_items a {
+    display:inline-block;
+    padding:10px;
+    text-decoration: none;
+}
+.menu_bar_items a:hover {
+    background-color: #f0f0f0
+}
+
+/* category config */
+.category-config {
+    list-style-type: none;
+    border-style: none;
+    margin: 0;
+    padding: 0;
+}
+.category-config li {
+    display:inline;
+    padding-right: 15px;
+}
+
+/* URL config */
+.url-config {
+    list-style-type: none;
+    border-style: none;
+    margin: 0;
+    padding: 0;
+}
+.url-config li {
+    display:inline;
+    padding-right: 15px;
+}
+
+/* File uploader */
+.file-uploader {
+    list-style-type: none;
+    border-style: none;
+    margin: 0;
+    padding: 0;
+}
+.file-uploader li {
+    display:inline;
+    padding-right: 15px;
+}
+
+.fs-monospace {
+    font-family: "Courier New", Courier, monospace;
+}
+
+/* record config */
+.record-config {
+    list-style-type: none;
+    border-style: solid;
+    border-width: 1px;
+    border-color: lightgrey;
+    margin: 0;
+    padding: 0;
+}
+.record-config li {
+    display:inline;
+    padding-right: 15px;
+}

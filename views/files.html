@@ -1,0 +1,118 @@
+{{#extend "layout"}}
+
+    {{#content "body"}}
+
+        <script type="text/javascript">
+
+            var columnDefs = [
+                {headerName: "File", field: "name"},
+                {headerName: "Size (bytes)", field: "size", width: 100, cellClass: 'ag-cell-right fs-monospace'},
+                {headerName: "MD5", field: "md5", width: 140, cellClass: 'ag-cell-right fs-monospace'},
+                {headerName: "Downloads", width: 100, cellClass: 'ag-cell-right fs-monospace',
+                    valueGetter: "data.stats.num_downloads"  // Required when accessing inner object attributes
+                },
+                {headerName: "Delete", width: 60, suppressResize: true, suppressSizeToFit: true, suppressMenu: true,
+                    cellRenderer: widgets.widgetTrash,
+                    cellClass: 'ag-cell-centered',
+                    onCellClicked: function(params) {
+                        deleteFile(params.data, function() {});
+                    }
+                }
+            ];
+
+            var gridOptions = grid_helper.getDefaultGridOptions();
+
+            // Delete the file in the database AND from the servers file system
+            function deleteFile(file, callback) {
+                if (confirm("Delete file '"+file.name+"'?")) {
+                    $.ajax({
+                        method: "DELETE",
+                        url: '/api/file/'+file.name
+                        }).done(function() {
+                            fetchFiles();
+                            callback();
+                    });
+                }
+            }
+
+            // wait for the document to be loaded, otherwise
+            // Angular Grid will not find the div in the document.
+            document.addEventListener("DOMContentLoaded", function() {
+                grid_helper.setGridSize(10);
+                // agGridGlobalFunc is a global function
+                agGridGlobalFunc('#grid-container', gridOptions);
+                grid_helper.addQuickFilterListener();
+                fetchFiles();
+            });
+
+            function fetchFiles() {
+                $.get('/api/files', function(data) {
+                    grid_helper.newData(data);
+                }); // Ajax get
+            }
+
+            function onUpload() {
+                var fileChooser = document.getElementById("fFileChooser");
+                if ('files' in fileChooser) {
+                    // Multiple file selections are not enabled in fFileChooser
+                    if (fileChooser.files.length === 1) {
+                        var file = fileChooser.files[0];
+
+                        $.ajax({
+                            url: '/api/file/upload/'+file.name,
+                            type: 'POST',
+                            xhr: function() {  // Custom XMLHttpRequest
+                                var myXhr = $.ajaxSettings.xhr();
+                                if (myXhr.upload) { // Check if upload property exists
+                                    myXhr.upload.addEventListener('progress', progressCallback, false);
+                                }
+                                return myXhr;
+                            },
+                            contentType: 'application/octet-stream',
+                            data: file,
+                            //Ajax events
+                            beforeSend: function() { $("#fStatus").text(''); },
+                            success: function() { $("#fStatus").text('OK'); fetchFiles(); },
+                            error: function() { $("#fStatus").text('Failed'); },
+                            // Tell jQuery not to process data
+                            processData: false
+                        });
+                    }
+                }
+            }
+
+            // Upload status - XMLHttpRequestProgressEvent
+            function progressCallback(ev) {
+                if (ev.lengthComputable) {
+                    $('#fProgress').attr({value:ev.loaded, max:ev.total});
+                }
+            }
+
+            // Ensure the grid is resized on window resize events
+            $(window).resize(function() {
+                grid_helper.gridSize();
+            });
+
+        </script>
+
+        <div>
+            <input type="text" id="quickFilterInput" placeholder="Filter..."/>
+        </div>
+        <p>
+        <div id="grid-container" style="width: 100%" class="ag-fileserver"></div>
+        <p>
+
+        <div class="file-uploader">
+            <ul>
+                <li>File Upload</li>
+                <li><input type="file"   id="fFileChooser"/></li>
+                <li><input type="button" id="fUploadButton" value="Upload" onclick="onUpload()"/></li>
+                <li><progress id="fProgress" value="0"/></li>
+                <li id='fStatus'/>
+            </ul>
+        </div>
+
+
+    {{/content}}
+
+{{/extend}}

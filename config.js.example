@@ -1,0 +1,22 @@
+/**
+ * File server application - configuration file
+ *
+ * (c) Jonathan Perkins https://github.com/JonathanPerkins 2015
+ */
+
+var storage_directory = '/var/lib/file_server';
+
+module.exports = {
+
+    // the directory in which the files for download are stored
+    file_directory : storage_directory+'/files',
+
+    // The directory into which the access logs will be placed
+    log_directory : storage_directory+'/logs',
+
+    // The file server database directory
+    db_directory : storage_directory+'/database',
+
+    // The public server download URL prefix, for building URL previews
+    public_url_prefix : 'http://myserver'
+};

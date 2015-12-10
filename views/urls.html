@@ -1,0 +1,230 @@
+{{#extend "layout"}}
+
+    {{#content "body"}}
+        <script type="text/javascript">
+
+            var not_selected = '-';
+
+            var columnDefs = [
+                {headerName: "Enabled", width: 60, suppressResize: true, suppressSizeToFit: true, suppressMenu: true,
+                    cellRenderer: function(params) {
+                        return widgets.widgetOnOffToggle(params.data.config.enabled);
+                    },
+                    cellClass: 'ag-cell-centered',
+                    onCellClicked: function(params) {
+                        toggleEnabled(params.data, function() {
+                            // Select the row (for visual purposes only)
+                            gridOptions.api.selectIndex(params.rowIndex, false, false);
+                        });
+                    }
+                },
+                {headerName: "Category",
+                    cellRenderer: function(params) {
+                        return params.data.category;
+                    }
+                },
+                {headerName: "File", field: "file"},
+                {headerName: "Description", field: "description"},
+                {headerName: "Remaining", width: 75,
+                    valueGetter: function(params) {
+                        return record_definitions.renderCount(params.data.config.count_remaining);
+                    },
+                    cellClass: 'ag-cell-right fs-monospace'
+                },
+                {headerName: "Downloads", width: 100, cellClass: 'ag-cell-right fs-monospace',
+                    valueGetter: "data.stats.num_downloads"  // Required when accessing inner object attributes
+                },
+                {headerName: "URL", width: 60, suppressResize: true, suppressSizeToFit: true, suppressMenu: true,
+                    cellClass: 'ag-cell-centered',
+                    cellRenderer: function(params) {
+                        return widgets.widgetDownload(params.context.public_url_prefix+'/'+params.data.name);
+                    }
+                },
+                {headerName: "Delete", width: 60, suppressResize: true, suppressSizeToFit: true, suppressMenu: true,
+                    cellRenderer: widgets.widgetTrash,
+                    cellClass: 'ag-cell-centered',
+                    onCellClicked: function(params) {
+                        deleteUrl(params.data, function() {});
+                    }
+                }
+            ];
+
+            var gridOptions = grid_helper.getDefaultGridOptions();
+            gridOptions.context = { public_url_prefix: '' };
+            gridOptions.onRowSelected = function(event) {
+                var rows = gridOptions.api.getSelectedNodes();
+                // Grid configured for only one row to be selected
+                if (rows.length === 1) {
+                    loadUrlForm(rows[0].data, false);
+                }
+            }
+
+            // The file that is currently loaded in the form
+            var urlForm = record_definitions.newUrlRecord();
+
+            // Load the URL form
+            function loadUrlForm(url, isNew) {
+                urlForm = url;
+                document.getElementById("fCategory").value = urlForm.category;
+                document.getElementById("fFile").value = urlForm.file;
+                document.getElementById("fDescription").value = urlForm.description;
+                if (isNew) {
+                    document.getElementById("fWriteButton").value = 'New URL';
+                }
+                else {
+                    document.getElementById("fWriteButton").value = 'Update';
+                }
+                loadRecordConfig(url.config);
+                updateUrlFormEnabled();
+            }
+
+            // Update the URL form enabled/disabled status
+            function updateUrlFormEnabled() {
+                if (urlForm.name == '') {
+                    $('#fWriteButton').attr('disabled',true);
+                    $('#fDescription').attr('disabled',true);
+                }
+                else {
+                    $('#fWriteButton').attr('disabled',false);
+                    $('#fDescription').attr('disabled',false);
+                }
+            }
+
+            // Clear the URL form
+            function clearUrlForm() {
+                loadUrlForm(record_definitions.newUrlRecord(), true);
+            }
+
+            // Read URL from the form
+            function readUrlForm() {
+                urlForm.category = document.getElementById("fCategory").value;
+                urlForm.file = document.getElementById("fFile").value;
+                urlForm.description = document.getElementById("fDescription").value;
+                // Only build name if both category and file have been selected
+                if ((urlForm.category !== not_selected) && (urlForm.file !== not_selected)) {
+                    urlForm.name = record_definitions.makeUrlPath(urlForm.category, urlForm.file);
+                }
+                else {
+                    urlForm.name = '';
+                }
+                urlForm.config = getRecordConfig();
+                return urlForm;
+            }
+
+            // Update the URL in the database and refresh the grid
+            function updateUrl(url, callback) {
+                var post_data = {};
+                post_data.url = JSON.stringify(url);
+                $.post('/api/url/'+url.name, post_data, function(data, status) {
+                    fetchUrls();
+                    callback();
+                });
+            }
+
+            // Toggle the enabled status of an URL
+            function toggleEnabled(url, callback) {
+                url.config.enabled = !url.config.enabled;
+                updateUrl(url, callback);
+            }
+
+            // Delete the URL in the database and refresh the grid
+            function deleteUrl(url, callback) {
+                if (confirm("Delete URL '"+url.name+"'?")) {
+                    // no helper for delete method
+                    $.ajax({
+                        method: "DELETE",
+                        url: '/api/url/'+url.name
+                        }).done(function() {
+                            clearUrlForm();
+                            fetchUrls();
+                            callback();
+                    });
+                }
+            }
+
+            // URL write button pressed
+            function writeButton() {
+                var url = readUrlForm()
+                if (url.name) {
+                    updateUrl(url, function() {
+                        clearUrlForm();
+                    });
+                }
+            }
+
+            // Category or file dropdown has changed
+            function onCatFileChanged() {
+                readUrlForm();
+                updateUrlFormEnabled();
+            }
+
+            // wait for the document to be loaded, otherwise
+            // Angular Grid will not find the div in the document.
+            document.addEventListener("DOMContentLoaded", function() {
+                grid_helper.setGridSize(10);
+                // agGridGlobalFunc is a global function
+                agGridGlobalFunc('#grid-container', gridOptions);
+                grid_helper.addQuickFilterListener();
+                clearUrlForm();
+                // Fetch the public URL prefix for building file links and
+                // store in the gridOptions context for cell renderers use.
+                $.get('/api/url_prefix', function(data) {
+                    if (data.prefix) {
+                        gridOptions.context.public_url_prefix = data.prefix;
+                    }
+                    // Once the prefix has been obtained, then fetch the URLs
+                    fetchUrls();
+                });
+            });
+
+            function fetchUrls() {
+                $.get('/api/urls', function(data) {
+                    grid_helper.newData(data);
+                });
+
+                // And the files & categories for creating new URLs
+                $.get('/api/files', function(data) {
+                    var dropdown = $("#fFile").empty();
+                    dropdown.append($("<option />").val(not_selected).text(not_selected));
+                    for (var i=0; i<data.length; i++) {
+                        dropdown.append($("<option />").val(data[i].name).text(data[i].name));
+                    }
+                });
+                $.get('/api/categories', function(data) {
+                    var dropdown = $("#fCategory").empty();
+                    dropdown.append($("<option />").val(not_selected).text(not_selected));
+                    for (var i=0; i<data.length; i++) {
+                        dropdown.append($("<option />").val(data[i].name).text(data[i].name));
+                    }
+                });
+            }
+
+            // Ensure the grid is resized on window resize events
+            $(window).resize(function() {
+                grid_helper.gridSize();
+            });
+
+        </script>
+
+        <div>
+            <input type="text" id="quickFilterInput" placeholder="Filter..."/>
+        </div>
+        <p>
+        <div id="grid-container" style="width: 100%" class="ag-fileserver"></div>
+        <p>
+
+        <div class="url-config">
+            <ul>
+                <li>Category: <select id="fCategory" onchange="onCatFileChanged()"></select></li>
+                <li>File: <select id="fFile" onchange="onCatFileChanged()"></select></li>
+                <li><input type="text" id="fDescription" size="50" placeholder="Description..."/></li>
+                <li><input type="button" id="fWriteButton" value="Update" onclick="writeButton()" /></li>
+            </ul>
+        </div>
+
+        <!-- common record configuration -->
+        {{> record_config}}
+
+    {{/content}}
+
+{{/extend}}

@@ -1,0 +1,43 @@
+<head>
+    <title>File Server</title>
+    <link rel="stylesheet" href="public/style.css" />
+    <link rel="stylesheet" href="fa/font-awesome.min.css">
+    <script type="text/javascript" src="jquery/jquery.min.js"></script>
+    <link type="text/css" rel="stylesheet" href="ag-grid/ag-grid.min.css" />
+    <link type="text/css" rel="stylesheet" href="public/theme-grid-fileserver.css" />
+    <script type="text/javascript" src="ag-grid/ag-grid.min.js"></script>
+    <!-- application scripts -->
+    <script type="text/javascript" src="public/grid_helper.js"></script>
+    <script type="text/javascript" src="public/record_definitions.js"></script>
+    <script type="text/javascript" src="public/widgets.js"></script>
+</head>
+<body>
+
+    <center><h2 class="banner">File Server Control Panel</h2></center>
+
+    <div id="menu_bar">
+
+        <div class="menu_bar_category">
+            <div class="menu_bar_category_title">Configuration</div>
+            <ul class="menu_bar_items">
+                <li><a href=urls.html>URLs</a></li>
+                <li><a href=files.html>Files</a></li>
+                <li><a href=categories.html>Categories</a></li>
+            </ul>
+        </div>
+
+        <div class="menu_bar_category">
+            <div class="menu_bar_category_title">Logs</div>
+            <ul class="menu_bar_items">
+                <li><a href=download_log.html>Downloads</a></li>
+                <li><a href=failure_log.html>Failures</a></li>
+                <li><a href=server_log.html>Server</a></li>
+            </ul>
+        </div>
+
+    </div>
+
+    {{#block "body"}}{{/block}}
+
+</body>
+</html>

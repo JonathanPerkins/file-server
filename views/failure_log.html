@@ -1,0 +1,78 @@
+{{#extend "layout"}}
+
+    {{#content "body"}}
+        <script type="text/javascript">
+
+            // Helper function to test if a nested object member exists
+            function testExists(obj, prop) {
+                var parts = prop.split('.');
+                for(var i = 0, l = parts.length; i < l; i++) {
+                    var part = parts[i];
+                    if(obj !== null && typeof obj === "object" && part in obj) {
+                        obj = obj[part];
+                    }
+                    else {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            var columnDefs = [
+                {headerName: "Category", field: "category"},
+                {headerName: "File", field: "file"},
+                {headerName: "Code", field: "code"},
+                {headerName: "Referrer",
+                    valueGetter: function(params) {
+                        return testExists(params, "data.info.referrer") ? params.data.info.referrer : '';
+                    }
+                },
+                {headerName: "Remote",
+                    valueGetter: function(params) {
+                        return testExists(params, "data.info.remote") ? params.data.info.remote : '';
+                    }
+                },
+                {headerName: "Time", width: 220,
+                    valueGetter: function(params) {
+                        var date = new Date(params.data.timestamp.$$date);
+                        return date.toLocaleString();
+                    }
+                }
+            ];
+
+            var gridOptions = grid_helper.getDefaultGridOptions();
+            // Enable column resizing
+            gridOptions.enableColResize = true;
+
+            // wait for the document to be loaded, otherwise
+            // Angular Grid will not find the div in the document.
+            document.addEventListener("DOMContentLoaded", function() {
+                grid_helper.setGridSize(30);
+                // agGridGlobalFunc is a global function
+                agGridGlobalFunc('#grid-container', gridOptions);
+                grid_helper.addQuickFilterListener();
+                fetchDownloads();
+            });
+
+            function fetchDownloads() {
+                $.get('/api/logs/failures', function(data) {
+                    grid_helper.newData(data);
+                }); // Ajax get
+            }
+
+            // Ensure the grid is resized on window resize events
+            $(window).resize(function() {
+                grid_helper.gridSize();
+            });
+
+        </script>
+
+        <div>
+            <input type="text" id="quickFilterInput" placeholder="Filter..."/>
+        </div>
+        <p>
+        <div id="grid-container" style="width: 100%" class="ag-fileserver"></div>
+
+    {{/content}}
+
+{{/extend}}

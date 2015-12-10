@@ -1,0 +1,199 @@
+.ag-fileserver .ag-root {
+  border: 1px solid #808080;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  /* allow text content to be copied */
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  user-select: text !important;
+}
+.ag-fileserver .ag-cell {
+  padding: 6px;
+}
+
+.ag-fileserver .ag-cell-centered {
+  text-align: center;
+  padding: 6px;
+}
+
+.ag-fileserver .ag-cell-right {
+  text-align: right;
+  padding: 6px;
+}
+
+.ag-fileserver .ag-cell-focus {
+  border: 1px solid #a9a9a9;
+}
+.ag-fileserver .ag-cell-no-focus {
+  border-right: 1px dotted #808080;
+  border-top: 1px solid transparent;
+  border-left: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+}
+.ag-fileserver .ag-pinned-header {
+  background-color: #fafafa;
+  border-bottom: 1px solid #808080;
+}
+.ag-fileserver .ag-header-container {
+  background-color: #fafafa;
+  border-bottom: 1px solid #808080;
+}
+.ag-fileserver .ag-header-cell {
+  border-right: 1px solid #808080;
+}
+.ag-fileserver .ag-header-group-cell {
+  border-right: 1px solid #808080;
+}
+.ag-fileserver .ag-header-group-cell-with-group {
+  border-bottom: 1px solid #808080;
+}
+.ag-fileserver .ag-header-cell-label {
+  padding: 4px 2px 4px 2px;
+}
+.ag-fileserver .ag-header-cell-text {
+  padding-left: 2px;
+}
+.ag-fileserver .ag-header-group-cell-label {
+  padding: 4px;
+  font-weight: bold;
+}
+.ag-fileserver .ag-header-group-text {
+  margin-right: 2px;
+}
+.ag-fileserver .ag-header-cell-menu-button {
+  padding: 2px;
+  margin-top: 4px;
+  border: 1px solid transparent;
+  -webkit-border-radius: 3px;
+  border-radius: 3px;
+  -webkit-box-sizing: content-box;
+  -moz-box-sizing: content-box;
+  box-sizing: content-box; /* When using bootstrap, box-sizing was set to 'border-box' */
+}
+.ag-fileserver .ag-header-cell-menu-button:hover {
+  border: 1px solid #000;
+}
+.ag-fileserver .ag-header-icon {
+  color: #800000;
+}
+.ag-fileserver .ag-dark .ag-header-expand-icon:hover {
+  cursor: pointer;
+}
+.ag-fileserver .ag-row-odd {
+  background-color: #fff;
+}
+.ag-fileserver .ag-row-even {
+  background-color: #fff;
+}
+.ag-fileserver .ag-loading-panel {
+  background-color: rgba(255,255,255,0.5);
+}
+.ag-fileserver .ag-loading-center {
+  background-color: #fff;
+  border: 1px solid #a9a9a9;
+  -webkit-border-radius: 10px;
+  border-radius: 10px;
+  padding: 10px;
+}
+.ag-fileserver .ag-body {
+  background-color: #fff;
+}
+.ag-fileserver .ag-row-selected {
+  background-color: #b0e0e6;
+}
+.ag-fileserver .ag-group-cell-entire-row {
+  background-color: #aaa;
+  padding: 4px;
+}
+.ag-fileserver .ag-footer-cell-entire-row {
+  background-color: #aaa;
+  padding: 4px;
+}
+.ag-fileserver .ag-group-cell {
+  font-style: italic;
+}
+.ag-fileserver .ag-group-expand {
+  padding-right: 2px;
+}
+.ag-fileserver .ag-footer-cell {
+  font-style: italic;
+}
+.ag-fileserver .ag-filter-checkbox {
+  position: relative;
+  top: 2px;
+  left: 2px;
+}
+.ag-fileserver .ag-filter-header-container {
+  border-bottom: 1px solid #d3d3d3;
+}
+.ag-fileserver .ag-filter-apply-panel {
+  border-top: 1px solid #d3d3d3;
+  padding: 2px;
+}
+.ag-fileserver .ag-filter {
+  border: 1px solid #000;
+  background-color: #f0f0f0;
+}
+.ag-fileserver .ag-filter-value {
+  margin-left: 4px;
+}
+.ag-fileserver .ag-selection-checkbox {
+  margin-left: 4px;
+}
+.ag-fileserver .ag-paging-panel {
+  padding: 4px;
+}
+.ag-fileserver .ag-paging-button {
+  margin-left: 4px;
+  margin-right: 4px;
+}
+.ag-fileserver .ag-paging-row-summary-panel {
+  display: inline-block;
+  width: 300px;
+}
+.ag-fileserver .ag-column-not-visible {
+  opacity: 0.75;
+  -ms-filter: "progid:DXImageTransform.Microsoft.Alpha(Opacity=75)";
+  filter: alpha(opacity=75);
+}
+.ag-fileserver .ag-not-dragging {
+  border: 1px solid transparent;
+}
+.ag-fileserver .ag-drop-target-above {
+  border-top: 5px solid #a9a9a9;
+}
+.ag-fileserver .ag-drop-target-below {
+  border-bottom: 5px solid #a9a9a9;
+}
+.ag-fileserver .ag-dragging {
+  border: 1px dotted #a9a9a9;
+}
+.ag-fileserver .ag-list-item-selected {
+  color: #f0f0f0;
+}
+.ag-fileserver .ag-list-item-not-selected {
+  font-style: italic;
+  color: #a0a0a0;
+}
+.ag-fileserver .ag-tool-panel-container {
+  background-color: #eee;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  border: 1px solid #a9a9a9;
+  padding: 4px;
+}
+.ag-fileserver .ag-list-selection {
+  background-color: #fff;
+  border: 1px solid #a9a9a9;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+.ag-fileserver .ag-popup-list .ag-list-item:hover {
+  background-color: #add8e6;
+}
+.ag-fileserver .ag-visible-icons {
+  padding-left: 2px;
+  padding-right: 2px;
+}

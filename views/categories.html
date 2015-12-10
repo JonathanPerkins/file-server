@@ -1,0 +1,163 @@
+{{#extend "layout"}}
+
+    {{#content "body"}}
+        <script type="text/javascript">
+
+            var columnDefs = [
+                {headerName: "Category", field: "name"},
+                {headerName: "Description", field: "description"},
+                {headerName: "Downloads", width: 100, cellClass: 'ag-cell-right fs-monospace',
+                    valueGetter: "data.stats.num_downloads"  // Required when accessing inner object attributes
+                },
+                {headerName: "Delete", width: 60, suppressResize: true, suppressSizeToFit: true, suppressMenu: true,
+                    cellRenderer: widgets.widgetTrash,
+                    cellClass: 'ag-cell-centered',
+                    onCellClicked: function(params) {
+                        deleteCategory(params.data, function() {});
+                    }
+                }
+            ];
+
+            var gridOptions = grid_helper.getDefaultGridOptions();
+
+            gridOptions.onRowSelected = function(event) {
+                var rows = gridOptions.api.getSelectedNodes();
+                // Grid configured for only one row to be selected
+                if (rows.length === 1) {
+                    loadCategoryForm(rows[0].data, false);
+                }
+            }
+
+            // The category that is currently loaded in the form
+            var formCategory = record_definitions.newCategoryRecord();
+
+            // Load the category form
+            function loadCategoryForm(category, isNew) {
+                formCategory = category;
+                document.getElementById("cName").value = category.name;
+                document.getElementById("cDescription").value = category.description;
+                if (isNew) {
+                    $('#cUpdateButton').attr('disabled',true);
+                }
+                else {
+                    $('#cUpdateButton').attr('disabled',false);
+                }
+                $('.cGenerate').html(widgets.widgetRefresh());
+            }
+
+            // Clear the category form
+            function clearCategoryForm() {
+                loadCategoryForm(record_definitions.newCategoryRecord(), true);
+            }
+
+            // The generate icon clicked on the category form
+            function generateClicked() {
+                // Set value to random string
+                // Based on a UUID generator, shortened for our use
+                var d = new Date().getTime();
+                var randomString = 'xxxxxxxxxxxxxxx'.replace(/[x]/g, function(c) {
+                    var r = (d + Math.random()*36)%36 | 0;
+                    d = Math.floor(d/16);
+                    return r.toString(36);
+                });
+                $('#cName').val(randomString);
+            }
+
+            // Update the category in the database and refresh the grid
+            function updateCategory(category, callback) {
+                var post_data = {};
+                post_data.category = JSON.stringify(category);
+                $.post('/api/category/'+category.name, post_data, function(data, status) {
+                    fetchCategories();
+                    callback();
+                });
+            }
+
+            // Delete the category in the database and refresh the grid
+            function deleteCategory(category, callback) {
+                if (confirm("Delete category '"+category.name+"'?")) {
+                    // no helper for delete method
+                    $.ajax({
+                        method: "DELETE",
+                        url: '/api/category/'+category.name
+                        }).done(function() {
+                            clearCategoryForm();
+                            fetchCategories();
+                            callback();
+                    });
+                }
+            }
+
+            // Category form buttons clicked
+            function onCategoryFormButton(isUpdate) {
+                var category = null;
+                var newName = document.getElementById("cName").value;
+                // Only action click if name is present - its the db key
+                if (newName.length > 0) {
+                    if (isUpdate) {
+                        // A new name?
+                        if (isUpdate && (formCategory.name !== newName)) {
+                            // Since name is a key, need to delete the old record first
+                            // otherwise we end up with 2 records
+                            $.ajax({method: "DELETE", url: '/api/category/'+formCategory.name});
+                        }
+                        // Inherit the original category (this includes the hidden
+                        // database index field "_id" which ensures the existing
+                        // record is replaced rather than a new one being created)
+                        category = formCategory;
+                    }
+                    else {
+                        category = record_definitions.newCategoryRecord();
+                    }
+
+                    category.name = newName;
+                    category.description = document.getElementById("cDescription").value;
+                    updateCategory(category, function() {
+                        clearCategoryForm();
+                    });
+                }
+            }
+
+            // wait for the document to be loaded, otherwise
+            // Angular Grid will not find the div in the document.
+            document.addEventListener("DOMContentLoaded", function() {
+                grid_helper.setGridSize(10);
+                // agGridGlobalFunc is a global function
+                agGridGlobalFunc('#grid-container', gridOptions);
+                grid_helper.addQuickFilterListener();
+                clearCategoryForm();
+                fetchCategories();
+            });
+
+            function fetchCategories() {
+                $.get('/api/categories', function(data) {
+                    grid_helper.newData(data);
+                }); // Ajax get
+            }
+
+            // Ensure the grid is resized on window resize events
+            $(window).resize(function() {
+                grid_helper.gridSize();
+            });
+
+        </script>
+
+        <div>
+            <input type="text" id="quickFilterInput" placeholder="Filter..."/>
+        </div>
+        <p>
+        <div id="grid-container" style="width: 100%" class="ag-fileserver"></div>
+        <p>
+        <div class="category-config">
+            <ul>
+                <li>Generate <span class="cGenerate" onclick="generateClicked()"></span></li>
+                <li><input type="text" id="cName" placeholder="Name..."/></li>
+                <li><input type="text" id="cDescription" size="50" placeholder="Description..."/></li>
+                <li><input type="button" id="cNewButton" value="New Category" onclick="onCategoryFormButton(false)" /></li>
+                <li><input type="button" id="cUpdateButton" value="Update" onclick="onCategoryFormButton(true)" /></li>
+            </ul>
+        </div>
+
+    {{/content}}
+
+{{/extend}}
