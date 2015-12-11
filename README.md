@@ -20,6 +20,27 @@ directly accessed from the internet. The file server should be fronted by
 a proxy such as nginx and the admin interface is expected to be accessed remotely
 via a SSL tunnel for security.
 
+Files are served by URLs of the form:
+
+```
+http://my.domain/<category>/<filename>
+```
+
+The web admin UI has configuration screens to create and manage:
+* categories:
+   * create either a user defined category or generate an 'unguessable' psuedo private category
+   * enable/disable/delete existing categories
+* files:
+   * upload new files
+   * enable/disable/delete existing files
+* URLs:
+   * create a new URL from a category+file
+   * enable/disable/delete existing URLs
+   * set an optional maximum download count for an URL; when that count is reached
+   the URL will be automatically disabled
+
+Download counts are displayed for all of the above.
+
 ## Install
 
 ```
