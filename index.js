@@ -44,13 +44,13 @@ var admin_server = server.connection({ host: 'localhost', address: '127.0.0.1', 
 // Adds server.views() support via vision plugin
 server.register(Vision, function (err) {
     if (err) {
-        console.log("Failed to load hapi.js vision plugin.");
+        logger.error("Failed to load hapi.js vision plugin.");
     }
 });
 // Adds file and directory handling support via inert plugin
 server.register(Inert, function (err) {
     if (err) {
-        console.log("Failed to load hapi.js inert plugin.");
+        logger.error("Failed to load hapi.js inert plugin.");
     }
 });
 
@@ -217,6 +217,7 @@ admin_server.route([
 server.register({
     register: Good,
     options: {
+        // hapi.js connection logging just to console to avoid filling log files
         reporters: [{
             reporter: require('good-console'),
             events: {
@@ -231,9 +232,10 @@ server.register({
     }
 
     server.start(function () {
-        server.log('info', 'Server running at: ');
+        var info = '';
         for (var i=0; i<server.connections.length; i++) {
-            server.log('info', '  ' + server.connections[i].info.uri);
+            info += ('  ' + server.connections[i].info.uri);
         }
+        logger.log('***** Server start, listening on:'+info+' *****');
     });
 });

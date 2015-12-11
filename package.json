@@ -1,6 +1,6 @@
 {
   "name": "file-server",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Node.js file server application",
   "main": "index.js",
   "scripts": {
@@ -32,8 +32,8 @@
     "jquery": "^2.1.4",
     "md5": "^2.0.0",
     "nedb": "^1.5.0",
-    "nedb-logger": "^0.1.0",
-    "vision": "^4.0.1"
+    "vision": "^4.0.1",
+    "winston": "^2.1.1"
   },
   "devDependencies": {
     "chai": "^3.4.1",

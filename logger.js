@@ -1,87 +1,138 @@
 /**
- * Download logger
+ * logger
  *
  * (c) Jonathan Perkins https://github.com/JonathanPerkins 2015
  */
 
-// nedb-logger uses same file format as nedb, but without keeping database in memory.
-var Logger = require('nedb-logger');
-var Reader = require('./log_reader');
-
-// Full logfile paths
-var okLogFile = null;
-var failureLogFile = null;
-var serverLogFile = null;
+var winston = require('winston');
 
 // Logger instances
 var logOk   = null;
 var logFail = null;
 var logServer = null;
 
+// Log query helper, returns result via callback(err, events)
+function queryLog(logger, name, callback) {
+    if (logger) {
+
+        // TODO: add paging support. For now, fetch a lot
+        var options = {
+            from: 1,
+            until: new Date(),
+            rows: 5000,
+            order: 'desc'
+        };
+
+        logger.query(options, function(err, results) {
+            var events;
+            if (!err) {
+                events = results[name];
+            }
+            callback(err, events);
+        });
+    }
+}
+
 module.exports = {
 
-    // Initialise with reference to config module
+    // Initialise using the config module
     init: function(config) {
-        okLogFile      = config.log_directory+'/downloads.db';
-        failureLogFile = config.log_directory+'/failures.db';
-        serverLogFile  = config.log_directory+'/server.db';
 
-        logOk   = new Logger({ filename: okLogFile });
-        logFail = new Logger({ filename: failureLogFile });
-        logServer = new Logger({ filename: serverLogFile });
+        // Create 3 logger instances, because we want to log only specific
+        // levels to each log file rather than the 'up to level n' as supported
+        // by one winston instance with multiple transports
+        logOk = new (winston.Logger)({
+            levels: { download: 10 },
+            transports: [
+                new (winston.transports.Console)(),
+                new (winston.transports.File)({
+                    name: 'downloads-file',
+                    filename: config.log_directory+'/downloads.log',
+                    maxsize: 1000000,
+                    maxFiles: 5,
+                    tailable: true
+                })
+            ]
+        });
+
+        logFail = new (winston.Logger)({
+            levels: { failure: 11 },
+            transports: [
+                new (winston.transports.Console)(),
+                new (winston.transports.File)({
+                    name: 'failures-file',
+                    filename: config.log_directory+'/failures.log',
+                    maxsize: 1000000,
+                    maxFiles: 5,
+                    tailable: true
+                })
+            ]
+        });
+
+        logServer = new (winston.Logger)({
+            transports: [
+                new (winston.transports.Console)(),
+                // And log all up to info level to file
+                new (winston.transports.File)({
+                    name: 'server-file',
+                    filename: config.log_directory+'/server.log',
+                    level: 'info',
+//                    handleExceptions: true,
+//                    humanReadableUnhandledException: true,
+                    exitOnError: false,
+                    maxsize: 1000000,
+                    maxFiles: 5,
+                    tailable: true
+                })
+            ]
+        });
+    },
+
+    // Application exit hook that can be used to ensure all SERVER file logs are flushed
+    exitAfterFlush: function(code) {
+        logServer.transports['server-file'].on('flush', function() {
+            process.exit(code);
+        });
     },
 
     // Log a download
     logDownload: function(category, filename, statusCode, info) {
         if (logOk && logFail) {
             if (statusCode === 200) {
-                logOk.insert({ category: category, file: filename, info: info, timestamp: new Date() }, function (err) {
-                    if (err) {
-                        console.log('Failed to log download, error: '+JSON.stringify(err));
-                    }
-                });
+                logOk.download({ category: category, file: filename, info: info});
             }
             else {
-                logFail.insert({ category: category, file: filename, info: info, code: statusCode, timestamp: new Date() }, function (err) {
-                    if (err) {
-                        console.log('Failed to log failure, error: '+JSON.stringify(err));
-                    }
-                });
+                logFail.failure({ category: category, file: filename, info: info, code: statusCode});
             }
         }
     },
 
     // Get logged downloads - only load into in-memory when access required
     getDownloads: function(callback) {
-        Reader.readAll(okLogFile, function(err, downloads) {
-            callback(err, downloads);
-        });
+        queryLog(logOk, 'downloads-file', callback);
     },
 
+    // Get logged download failures
     getFailures: function(callback) {
-        Reader.readAll(failureLogFile, function(err, failures) {
-            callback(err, failures);
-        });
+        queryLog(logFail, 'failures-file', callback);
     },
 
     // Generic logging for server events
     log: function(text) {
         if (logServer) {
-            logServer.insert({ log: text, type: 'info', timestamp: new Date() }, function (err) {
-                if (err) {
-                    // Yes, I know this should be in the log, but...
-                    console.log('Failed to log server event, error: '+JSON.stringify(err));
-                }
-            });
-            // And log to the console for easy development testing
-            console.log(text);
+            logServer.info(text);
+        }
+    },
+
+    // Generic logging for server errors
+    error: function(text) {
+        if (logServer) {
+            logServer.error(text);
         }
     },
 
     getServerEvents: function(callback) {
-        Reader.readAll(serverLogFile, function(err, serverEvents) {
-            callback(err, serverEvents);
-        });
+        queryLog(logServer, 'server-file', callback);
     }
 
 };

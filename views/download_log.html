@@ -31,9 +31,9 @@
                         return testExists(params, "data.info.remote") ? params.data.info.remote : '';
                     }
                 },
-                {headerName: "Time", width: 220,
+                {headerName: "Time", width: 250, suppressSizeToFit: true,
                     valueGetter: function(params) {
-                        var date = new Date(params.data.timestamp.$$date);
+                        var date = new Date(params.data.timestamp);
                         return date.toLocaleString();
                     }
                 }

@@ -19,15 +19,11 @@
             }
 
             var columnDefs = [
-                {headerName: "Event", field: "log"},
-                {headerName: "Type",
+                {headerName: "Message", field: "message"},
+                {headerName: "Level",   field: "level", width: 75, suppressSizeToFit: true},
+                {headerName: "Time", width: 250, suppressSizeToFit: true,
                     valueGetter: function(params) {
-                        return testExists(params, "data.type") ? params.data.type : '';
-                    }
-                },
-                {headerName: "Time", width: 220,
-                    valueGetter: function(params) {
-                        var date = new Date(params.data.timestamp.$$date);
+                        var date = new Date(params.data.timestamp);
                         return date.toLocaleString();
                     }
                 }
