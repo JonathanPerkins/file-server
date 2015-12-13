@@ -5,6 +5,7 @@
  */
 
 var winston = require('winston');
+var cbuff   = require('winston-circular-buffer');
 
 // Logger instances
 var logOk   = null;
@@ -15,12 +16,8 @@ var logServer = null;
 function queryLog(logger, name, callback) {
     if (logger) {
 
-        // TODO: add paging support. For now, fetch a lot
         var options = {
-            from: 1,
-            until: new Date(),
-            rows: 5000,
-            order: 'desc'
+            json: true
         };
 
         logger.query(options, function(err, results) {
@@ -45,8 +42,15 @@ module.exports = {
             levels: { download: 10 },
             transports: [
                 new (winston.transports.Console)(),
+                new (winston.transports.CircularBuffer)({
+                    name: 'downloads-buffer',
+                    level: 'download',
+                    json: true,
+                    size: 50
+                }),
                 new (winston.transports.File)({
                     name: 'downloads-file',
+                    level: 'download',
                     filename: config.log_directory+'/downloads.log',
                     maxsize: 1000000,
                     maxFiles: 5,
@@ -59,8 +63,15 @@ module.exports = {
             levels: { failure: 11 },
             transports: [
                 new (winston.transports.Console)(),
+                new (winston.transports.CircularBuffer)({
+                    name: 'failures-buffer',
+                    level: 'failure',
+                    json: true,
+                    size: 50
+                }),
                 new (winston.transports.File)({
                     name: 'failures-file',
+                    level: 'failure',
                     filename: config.log_directory+'/failures.log',
                     maxsize: 1000000,
                     maxFiles: 5,
@@ -72,13 +83,19 @@ module.exports = {
         logServer = new (winston.Logger)({
             transports: [
                 new (winston.transports.Console)(),
+                new (winston.transports.CircularBuffer)({
+                    name: 'server-buffer',
+                    level: 'info',
+                    json: true,
+                    size: 50
+                }),
                 // And log all up to info level to file
                 new (winston.transports.File)({
                     name: 'server-file',
                     filename: config.log_directory+'/server.log',
                     level: 'info',
-//                    handleExceptions: true,
-//                    humanReadableUnhandledException: true,
+                    handleExceptions: true,
+                    humanReadableUnhandledException: true,
                     exitOnError: false,
                     maxsize: 1000000,
                     maxFiles: 5,
@@ -109,12 +126,12 @@ module.exports = {
 
     // Get logged downloads - only load into in-memory when access required
     getDownloads: function(callback) {
-        queryLog(logOk, 'downloads-file', callback);
+        queryLog(logOk, 'downloads-buffer', callback);
     },
 
     // Get logged download failures
     getFailures: function(callback) {
-        queryLog(logFail, 'failures-file', callback);
+        queryLog(logFail, 'failures-buffer', callback);
     },
 
     // Generic logging for server events
@@ -132,7 +149,7 @@ module.exports = {
     },
 
     getServerEvents: function(callback) {
-        queryLog(logServer, 'server-file', callback);
+        queryLog(logServer, 'server-buffer', callback);
     }
 
 };
