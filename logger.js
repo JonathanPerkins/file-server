@@ -17,7 +17,12 @@ function queryLog(logger, name, callback) {
     if (logger) {
 
         var options = {
-            json: true
+            // Want the circular buffer to return data as json objects.
+            json: true,
+            // Circular buffer always returns up to the buffer limit, so
+            // we can use the options.limit to restrict the returned
+            // results from the file transport, since we won't be using those.
+            limit: 1
         };
 
         logger.query(options, function(err, results) {
