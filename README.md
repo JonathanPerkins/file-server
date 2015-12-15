@@ -1,4 +1,5 @@
 # File Server
+[![Build Status](https://travis-ci.org/JonathanPerkins/file-server.svg?branch=master)](https://travis-ci.org/JonathanPerkins/file-server)
 
 A node.js based file server with local admin web interface.
 
@@ -62,7 +63,11 @@ npm start
 
 ### Unit tests
 
-With the application running, in another shell:
+The unit test framework supports testing both a running server and a clean
+repository. The mocha root hooks in `test/00_test_framework.js` use an API call
+to test if a server is already active. If one is not found it will run a temporary configuration, execute the unit tests and then shut down when complete.
+
+For both cases, just run:
 
 ```
 npm test
