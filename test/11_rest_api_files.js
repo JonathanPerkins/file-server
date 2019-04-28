@@ -134,14 +134,14 @@ describe('REST API: files', function() {
     });
 
     describe('attempt to upload file with bad path', function() {
-        it('should return 400 Bad Request', function(done) {
+        it('should return 404 Not Found for the bad URL path', function(done) {
             server
                 // Missing file name
                 .post('/api/file/upload/../bad.txt')
                 .set('Content-Type', 'application/octet-stream')
                 .send(test_file_contents)
                 .expect('Content-type', /json/)
-                .expect(400)
+                .expect(404)
                 .end(function(err, res) {
                     if (err) return done(err);
                     done();

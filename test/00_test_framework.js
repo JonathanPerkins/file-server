@@ -75,10 +75,12 @@ before(function(done) {
                 testCreatedDirectory = true;
 
                 console.log('starting server under test');
-                server.init(config, function(err) {
+                server.init(config, async function(err) {
                     should.not.exist(err);
+                }).then(function () {
                     server.start(function(err) {
                         should.not.exist(err);
+                    }).then(function() {
                         serverStartedByTest = true;
                         done();
                     });
@@ -101,8 +103,7 @@ after(function(done) {
             console.log('removing temporary test directories');
             // Delete the temporary test directories
             deleteFolderRecursive('./tmp');
-            done();
-        });
+        }).then(done);
     }
     else {
         done();

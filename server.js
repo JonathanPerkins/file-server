@@ -7,13 +7,10 @@
 /*jslint node: true */
 'use strict';
 
-var Hapi = require('hapi');
-var Good = require('good');
-var Boom = require('boom');
-var Joi = require('joi');
+var Hapi = require('@hapi/hapi');
+var Boom = require('@hapi/boom');
+var Joi = require('@hapi/joi');
 var Path = require('path');
-var Vision = require('vision');
-var Inert = require('inert');
 var Handlebars = require('handlebars');
 var Layouts = require('handlebars-layouts');
 // Application modules
@@ -23,13 +20,14 @@ var access_control = require('./access_control');
 var rest_apis = require('./rest_apis');
 var logger = require('./logger');
 
-// Server instance
-var server = null;
+// Server instances
+var file_server = null;
+var admin_server = null;
 
 module.exports = {
 
     // Initialise the server - callback(err) on error or init ok (err===null)
-    init: function(config, callback) {
+    init: async function(config, callback) {
         // Initialise modules
         logger.init(config);
         database.init(config, logger);
@@ -42,30 +40,28 @@ module.exports = {
         // hapi.js initialisation
         // *************************************************
 
-        // Create a server with 2 ports
-        server = new Hapi.Server();
-        var file_server  = server.connection({ host: 'localhost', address: '127.0.0.1', port: 3100, labels: ['files'] });
-        var admin_server = server.connection({ host: 'localhost', address: '127.0.0.1', port: 3200, labels: ['admin'] });
+        // Create 2 servers
+        file_server  = Hapi.Server({ host: 'localhost', address: '127.0.0.1', port: 3100});
+        admin_server = Hapi.Server({ host: 'localhost', address: '127.0.0.1', port: 3200});
 
-        // Adds server.views() support via vision plugin
-        server.register(Vision, function (err) {
-            if (err) {
-                logger.error("Failed to load hapi.js vision plugin.");
-            }
-        });
-        // Adds file and directory handling support via inert plugin
-        server.register(Inert, function (err) {
-            if (err) {
-                logger.error("Failed to load hapi.js inert plugin.");
-            }
-        });
+        try {
+          // Adds server.views() support via vision plugin
+          await file_server.register(require('@hapi/vision'));
+          await admin_server.register(require('@hapi/vision'));
+          // Adds file and directory handling support via inert plugin
+          await file_server.register(require('@hapi/inert'));
+          await admin_server.register(require('@hapi/inert'));
+        }
+        catch (err) {
+              logger.error("Failed to load plugin: "+err);
+        }
 
         // Configure handlebars
         var engine = Handlebars.create();
         Layouts.register(engine);
 
         // Use handlebars for rendering views
-        server.views({
+        admin_server.views({
           engines: {
             html: engine
           },
@@ -81,35 +77,37 @@ module.exports = {
         file_server.route({
             method: "GET",
             path: "/{category}/{filename*}",
-            handler: function(request, reply) {
+            handler: function(request, h) {
                 var filename = request.params.filename;
                 if (request.params.category && filename) {
-                    access_control.isAllowed(request.params.category, filename, function(isAllowed) {
-                        if (isAllowed) {
-                            // optional query ?hash=md5 will return the MD5 sum of the
-                            // requested file instead of the file itself.
-                            if (request.query.hash === 'md5') {
-                                database.getFile(filename, function(err, fileRecord) {
-                                    if (err || (fileRecord === null)) {
-                                        reply(Boom.notFound('error: MD5 unavailable'));
-                                    }
-                                    else {
-                                        reply(fileRecord.md5).type('text/plain');
-                                    }
-                                });
+                    return new Promise(function(resolve, reject) {
+                        access_control.isAllowed(request.params.category, filename, function(isAllowed) {
+                            if (isAllowed) {
+                                // optional query ?hash=md5 will return the MD5 sum of the
+                                // requested file instead of the file itself.
+                                if (request.query.hash === 'md5') {
+                                    database.getFile(filename, function(err, fileRecord) {
+                                        if (err || (fileRecord === null)) {
+                                            resolve(Boom.notFound('error: MD5 unavailable'));
+                                        }
+                                        else {
+                                            resolve(h.response(fileRecord.md5).type('text/plain'));
+                                        }
+                                    });
+                                }
+                                else {
+                                    resolve(h.file(config.file_directory+'/'+filename));
+                                }
                             }
                             else {
-                                reply.file(config.file_directory+'/'+filename);
+                                resolve(Boom.notFound());
                             }
-                        }
-                        else {
-                            reply(Boom.notFound());
-                        }
+                        });
                     });
                 }
                 else {
                     logger.log('Dodgy URL: '+request.params.category+' ,'+filename);
-                    reply(Boom.notFound());
+                    return Boom.notFound();
                 }
             },
             config: {
@@ -126,14 +124,14 @@ module.exports = {
                     failAction: function(request, reply, source, error) {
                         logger.log('URL validation fail: '+error);
                         // Don't give anything away on validation errors on the public interface
-                        reply(Boom.notFound());
+                        return Boom.notFound();
                     }
                 }
             }
         });
 
         // Record successful downloads
-        file_server.on('response', function (request) {
+        file_server.events.on('response', function (request) {
             // Don't bother logging robots.txt or favicon.ico requests
             if (request.path !== '/robots.txt' && request.path !== '/favicon.ico') {
                 // Update the stats if the file was downloaded successfully
@@ -165,14 +163,14 @@ module.exports = {
         file_server.route({
             method: "GET",
             path: "/robots.txt",
-            handler: function(request, reply) {
+            handler: function(request, h) {
                 // Build multi-line string
                 var robots = [
                     'User-agent: *',
                     'Disallow: /',
                     ''
                 ].join('\n');
-                return reply(robots).type('text/plain');
+                return h.response(robots).type('text/plain');
             }
         });
 
@@ -180,8 +178,8 @@ module.exports = {
         file_server.route({
             method: "GET",
             path: "/favicon.ico",
-            handler: function(request, reply) {
-                return reply(Boom.notFound());
+            handler: function(request, h) {
+                return Boom.notFound();
             }
         });
 
@@ -192,13 +190,13 @@ module.exports = {
         admin_server.route({
             method: "GET",
             path: "/{page?}",
-            handler: function(request, reply) {
+            handler: function(request, h) {
                 var context = {};
                 if (request.params.page) {
-                    reply.view(request.params.page, context);
+                    return h.view(request.params.page, context);
                 }
                 else {
-                    reply.view("urls.html", context);
+                    return h.view("urls.html", context);
                 }
             }
         });
@@ -210,69 +208,95 @@ module.exports = {
         admin_server.route([
             { method: 'GET', path: '/public/{param}', handler: { directory: { path: 'public', listing: false } }},
             // Resources directly from the node_modules directory tree
-            { method: 'GET', path: '/ag-grid/{param}', handler: { directory: { path: 'node_modules/ag-grid/dist', listing: false } }},
+            { method: 'GET', path: '/ag-grid/{param}', handler: { directory: { path: 'node_modules/ag-grid-community/dist', listing: false } }},
+            { method: 'GET', path: '/ag-grid/styles/{param}', handler: { directory: { path: 'node_modules/ag-grid-community/dist/styles', listing: false } }},
             { method: 'GET', path: '/fa/{param}', handler: { directory: { path: 'node_modules/font-awesome/css', listing: false } }},
             { method: 'GET', path: '/fonts/{param}', handler: { directory: { path: 'node_modules/font-awesome/fonts', listing: false } }},
             { method: 'GET', path: '/jquery/{param}', handler: { directory: { path: 'node_modules/jquery/dist', listing: false } }}
         ]);
 
+        // Don't log any errors for favicon.ico requests
+        admin_server.route({
+            method: "GET",
+            path: "/favicon.ico",
+            handler: function(request, h) {
+                return Boom.notFound();
+            }
+        });
+
         callback(null);
     },
 
     // Start the server - callback(err) on error or started ok (err===null)
-    start: function(callback) {
-        if (server) {
+    start: async function(callback) {
+        if (file_server && admin_server) {
             // *************************************************
             // Add console logging and start server
             // *************************************************
 
-            server.register({
-                register: Good,
-                options: {
-                    // hapi.js connection logging just to console to avoid filling log files
-                    reporters: [{
-                        reporter: require('good-console'),
-                        events: {
-                            response: '*',
-                            log: '*'
+            try {
+                await file_server.register({
+                    plugin: require('good'),
+                    options: {
+                        // hapi.js connection logging just to console to avoid filling log files
+                        reporters: {
+                            myReporter: [
+                                {
+                                    module: 'good-console'
+                                }
+                            ]
                         }
-                    }]
-                }
-            }, function (err) {
-                if (err) {
-                    callback(err); // something bad happened loading the plugin
-                }
-
-                server.start(function (err) {
-                    if (err) {
-                        logger.error('Error starting server: '+err);
-                        callback(err);
-                    }
-                    else {
-                        var info = '';
-                        for (var i=0; i<server.connections.length; i++) {
-                            info += ('  ' + server.connections[i].info.uri);
-                        }
-                        logger.log('***** Server start, listening on:'+info+' *****');
-                        callback(null);
                     }
                 });
-            });
+                await admin_server.register({
+                    plugin: require('good'),
+                    options: {
+                        reporters: {
+                            myReporter: [
+                                {
+                                    module: 'good-console'
+                                }
+                            ]
+                        }
+                    }
+                });
+                await file_server.start()
+                await admin_server.start()
+
+                var info = file_server.info.uri + ', ' + admin_server.info.uri;
+                logger.log('***** Server start, listening on: '+info+' *****');
+                callback(null);
+            }
+            catch(err) {
+                logger.error('Error starting server: '+err);
+                callback(err);
+            }
+        }
+        else {
+            const err = 'Server object not created?';
+            logger.error(err);
+            callback(err);
         }
     },
 
-    stop: function(callback) {
-        if (server) {
-            server.stop(function(err) {
-                if (err) {
-                    logger.error('Error stopping server: '+err);
-                    callback(err);
-                }
-                else {
-                    logger.log('***** Server stopped *****');
-                    callback(null);
-                }
-            });
+    stop: async function(callback) {
+        if (file_server && admin_server) {
+            try {
+                await file_server.stop()
+                await admin_server.stop()
+                logger.log('***** Server stopped *****');
+                logger.end();
+                callback(null);
+            }
+            catch(err) {
+                logger.error('Error stopping server: '+err);
+                callback(err);
+            }
+        }
+        else {
+            const err = 'Server object not created?';
+            logger.error(err);
+            callback(err);
         }
     }
 

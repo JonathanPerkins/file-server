@@ -4,8 +4,7 @@
  * (c) Jonathan Perkins https://github.com/JonathanPerkins 2015
  */
 
-var winston = require('winston');
-var cbuff   = require('winston-circular-buffer');
+const {transports, createLogger, format} = require('winston');
 
 // Logger instances
 var logOk   = null;
@@ -17,12 +16,10 @@ function queryLog(logger, name, callback) {
     if (logger) {
 
         var options = {
-            // Want the circular buffer to return data as json objects.
-            json: true,
-            // Circular buffer always returns up to the buffer limit, so
-            // we can use the options.limit to restrict the returned
-            // results from the file transport, since we won't be using those.
-            limit: 1
+            limit: 50,
+            start: 0,
+            order: 'desc',
+            fields: ['message', 'level', 'timestamp']
         };
 
         logger.query(options, function(err, results) {
@@ -43,17 +40,15 @@ module.exports = {
         // Create 3 logger instances, because we want to log only specific
         // levels to each log file rather than the 'up to level n' as supported
         // by one winston instance with multiple transports
-        logOk = new (winston.Logger)({
+        logOk = new (createLogger)({
             levels: { download: 10 },
+            format: format.combine(
+                format.timestamp(),
+                format.json()
+            ),
             transports: [
-                new (winston.transports.Console)(),
-                new (winston.transports.CircularBuffer)({
-                    name: 'downloads-buffer',
-                    level: 'download',
-                    json: true,
-                    size: 50
-                }),
-                new (winston.transports.File)({
+                new (transports.Console)(),
+                new (transports.File)({
                     name: 'downloads-file',
                     level: 'download',
                     filename: config.log_directory+'/downloads.log',
@@ -64,17 +59,15 @@ module.exports = {
             ]
         });
 
-        logFail = new (winston.Logger)({
+        logFail = new (createLogger)({
             levels: { failure: 11 },
+            format: format.combine(
+                format.timestamp(),
+                format.json()
+            ),
             transports: [
-                new (winston.transports.Console)(),
-                new (winston.transports.CircularBuffer)({
-                    name: 'failures-buffer',
-                    level: 'failure',
-                    json: true,
-                    size: 50
-                }),
-                new (winston.transports.File)({
+                new (transports.Console)(),
+                new (transports.File)({
                     name: 'failures-file',
                     level: 'failure',
                     filename: config.log_directory+'/failures.log',
@@ -85,17 +78,15 @@ module.exports = {
             ]
         });
 
-        logServer = new (winston.Logger)({
+        logServer = new (createLogger)({
+            format: format.combine(
+                format.timestamp(),
+                format.json()
+            ),
             transports: [
-                new (winston.transports.Console)(),
-                new (winston.transports.CircularBuffer)({
-                    name: 'server-buffer',
-                    level: 'info',
-                    json: true,
-                    size: 50
-                }),
-                // And log all up to info level to file
-                new (winston.transports.File)({
+                new (transports.Console)(),
+                //And log all up to info level to file
+                new (transports.File)({
                     name: 'server-file',
                     filename: config.log_directory+'/server.log',
                     level: 'info',
@@ -108,6 +99,19 @@ module.exports = {
                 })
             ]
         });
+    },
+
+    // Shut down the logging system
+    end: function() {
+        if (logOk) {
+            logOk.end();
+        }
+        if (logFail) {
+            logFail.end();
+        }
+        if (logServer) {
+            logServer.end();
+        }
     },
 
     // Application exit hook that can be used to ensure all SERVER file logs are flushed
@@ -131,12 +135,12 @@ module.exports = {
 
     // Get logged downloads - only load into in-memory when access required
     getDownloads: function(callback) {
-        queryLog(logOk, 'downloads-buffer', callback);
+        queryLog(logOk, 'downloads-file', callback);
     },
 
     // Get logged download failures
     getFailures: function(callback) {
-        queryLog(logFail, 'failures-buffer', callback);
+        queryLog(logFail, 'failures-file', callback);
     },
 
     // Generic logging for server events
@@ -149,12 +153,12 @@ module.exports = {
     // Generic logging for server errors
     error: function(text) {
         if (logServer) {
-            logServer.error(text);
+            logServer.info(text);
         }
     },
 
     getServerEvents: function(callback) {
-        queryLog(logServer, 'server-buffer', callback);
+        queryLog(logServer, 'server-file', callback);
     }
 
 };

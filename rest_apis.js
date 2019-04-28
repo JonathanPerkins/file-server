@@ -4,8 +4,8 @@
  * (c) Jonathan Perkins https://github.com/JonathanPerkins 2015
  */
 
-var Boom = require('boom');
-var Joi = require('joi');
+var Boom = require('@hapi/boom');
+var Joi = require('@hapi/joi');
 var record_definitions = require('./public/record_definitions');
 
 // Helper for processing API callback(err, docs) with JSON data
@@ -44,9 +44,11 @@ module.exports = {
         admin_server.route({
             method: "GET",
             path: "/api/category/{name}",
-            handler: function(request, reply) {
-                database.getCategory(request.params.name, function(err, category){
-                    reply(apiDataResponse(err, category));
+            handler: function(request, h) {
+                return new Promise(function(resolve, reject) {
+                    database.getCategory(request.params.name, function(err, category){
+                        resolve(apiDataResponse(err, category));
+                    });
                 });
             }
         });
@@ -54,20 +56,24 @@ module.exports = {
         admin_server.route({
             method: "GET",
             path: "/api/categories/{attr?}",
-            handler: function(request, reply) {
+            handler: function(request, h) {
                 if (request.params.attr) {
                     if (request.params.attr === 'public') {
-                        database.getPublicCategories(function(err, categories){
-                            reply(apiDataResponse(err, categories));
+                        return new Promise(function(resolve, reject) {
+                            database.getPublicCategories(function(err, categories){
+                                resolve(apiDataResponse(err, categories));
+                            });
                         });
                     }
                     else {
-                        reply(Boom.notFound('Invalid attribute: '+request.params.attr));
+                        return Boom.notFound('Invalid attribute: '+request.params.attr);
                     }
                 }
                 else {
-                    database.getCategories(function(err, categories){
-                        reply(apiDataResponse(err, categories));
+                    return new Promise(function(resolve, reject) {
+                        database.getCategories(function(err, categories){
+                            resolve(apiDataResponse(err, categories));
+                        });
                     });
                 }
             }
@@ -76,16 +82,18 @@ module.exports = {
         admin_server.route({
             method: "POST",
             path: "/api/category/{name}",
-            handler: function(request, reply) {
+            handler: function(request, h) {
                 try {
                     // Category has been stringify'd to avoid ajax POST number->string conversion
                     var category = JSON.parse(request.payload.category);
-                    database.setCategory(request.params.name, category, function(err) {
-                        reply(apiMessageResponse(err, "category updated OK"));
+                    return new Promise(function(resolve, reject) {
+                        database.setCategory(request.params.name, category, function(err) {
+                            resolve(apiMessageResponse(err, "category updated OK"));
+                        });
                     });
                 }
                 catch (e) {
-                    reply(Boom.badData('Malformed POST data for URL', request.payload));
+                    return Boom.badData('Malformed POST data for URL', request.payload);
                 }
             }
         });
@@ -93,9 +101,11 @@ module.exports = {
         admin_server.route({
             method: "DELETE",
             path: "/api/category/{name}",
-            handler: function(request, reply) {
-                database.deleteCategory(request.params.name, function(err) {
-                    reply(apiMessageResponse(err, "category deleted OK"));
+            handler: function(request, h) {
+                return new Promise(function(resolve, reject) {
+                    database.deleteCategory(request.params.name, function(err) {
+                        resolve(apiMessageResponse(err, "category deleted OK"));
+                    });
                 });
             }
         });
@@ -107,9 +117,11 @@ module.exports = {
         admin_server.route({
             method: "GET",
             path: "/api/files",
-            handler: function(request, reply) {
-                database.getFiles(function(err, files){
-                    reply(apiDataResponse(err, files));
+            handler: function(request, h) {
+                return new Promise(function(resolve, reject) {
+                    database.getFiles(function(err, files){
+                        resolve(apiDataResponse(err, files));
+                    });
                 });
             }
         });
@@ -117,9 +129,11 @@ module.exports = {
         admin_server.route({
             method: "GET",
             path: "/api/file/{name*}",
-            handler: function(request, reply) {
-                database.getFile(request.params.name, function(err, file){
-                    reply(apiDataResponse(err, file));
+            handler: function(request, h) {
+                return new Promise(function(resolve, reject) {
+                    database.getFile(request.params.name, function(err, file){
+                        resolve(apiDataResponse(err, file));
+                    });
                 });
             }
         });
@@ -128,15 +142,17 @@ module.exports = {
         admin_server.route({
             method: "POST",
             path: "/api/file/upload/{name*}",
-            handler: function(request, reply) {
+            handler: function(request, h) {
                 if (request.params.name) {
-                    // This route is configured below to deliver the payload as a Stream.Readable
-                    file_manager.save(request.params.name, request.payload, function(err) {
-                        reply(apiMessageResponse(err, "file uploaded OK"));
+                    return new Promise(function(resolve, reject) {
+                        // This route is configured below to deliver the payload as a Stream.Readable
+                        file_manager.save(request.params.name, request.payload, function(err) {
+                            resolve(apiMessageResponse(err, "file uploaded OK"));
+                        });
                     });
                 }
                 else {
-                    reply(Boom.badRequest('Missing filename'));
+                    return Boom.badRequest('Missing filename');
                 }
             },
             config: {
@@ -150,7 +166,12 @@ module.exports = {
                     params: {
                         // Don't accept dodgy looking URLs - just a simple filename
                         name: Joi.string().regex(/^[a-zA-Z0-9_\-\s\.]+$/)
-                    }
+                    },
+                    failAction: function(request, reply, source, error) {
+                        logger.log('URL validation fail: '+source);
+                        return Boom.badRequest('URL validation fail');
+                    },
+                    query: false
                 }
             }
         });
@@ -158,9 +179,11 @@ module.exports = {
         admin_server.route({
             method: "DELETE",
             path: "/api/file/{name*}",
-            handler: function(request, reply) {
-                file_manager.delete(request.params.name, function(err) {
-                    reply(apiMessageResponse(err, "file deleted OK"));
+            handler: function(request, h) {
+                return new Promise(function(resolve, reject) {
+                    file_manager.delete(request.params.name, function(err) {
+                        resolve(apiMessageResponse(err, "file deleted OK"));
+                    });
                 });
             }
         });
@@ -173,17 +196,21 @@ module.exports = {
         admin_server.route({
             method: "GET",
             path: "/api/url_prefix",
-            handler: function(request, reply) {
-                reply(apiDataResponse(null, { prefix: config.public_url_prefix }));
+            handler: function(request, h) {
+                return new Promise(function(resolve, reject) {
+                    resolve(apiDataResponse(null, { prefix: config.public_url_prefix }));
+                });
             }
         });
 
         admin_server.route({
             method: "GET",
             path: "/api/urls",
-            handler: function(request, reply) {
-                database.getUrls(function(err, urls){
-                    reply(apiDataResponse(err, urls));
+            handler: function(request, h) {
+                return new Promise(function(resolve, reject) {
+                    database.getUrls(function(err, urls){
+                        resolve(apiDataResponse(err, urls));
+                    });
                 });
             }
         });
@@ -191,9 +218,11 @@ module.exports = {
         admin_server.route({
             method: "GET",
             path: "/api/url/{name*}",  // For URLs, name is the path (category/filename) so allow multiple fields
-            handler: function(request, reply) {
-                database.getUrl(request.params.name, function(err, url){
-                    reply(apiDataResponse(err, url));
+            handler: function(request, h) {
+                return new Promise(function(resolve, reject) {
+                    database.getUrl(request.params.name, function(err, url){
+                        resolve(apiDataResponse(err, url));
+                    });
                 });
             }
         });
@@ -201,16 +230,23 @@ module.exports = {
         admin_server.route({
             method: "POST",
             path: "/api/url/{name*}",
-            handler: function(request, reply) {
+            handler: function(request, h) {
                 // URL has been stringify'd to avoid ajax POST number->string conversion
                 try {
-                    var url = JSON.parse(request.payload.url);
-                    database.setUrl(request.params.name, url, function(err) {
-                        reply(apiMessageResponse(err, "URL updated OK"));
-                    });
+                    if (request.payload.url) {
+                        var url = JSON.parse(request.payload.url);
+                        return new Promise(function(resolve, reject) {
+                            database.setUrl(request.params.name, url, function(err) {
+                                resolve(apiMessageResponse(err, "URL updated OK"));
+                            });
+                        });
+                    }
+                    else {
+                        throw Error('Missing URL');
+                    }
                 }
                 catch (e) {
-                    reply(Boom.badData('Malformed POST data for URL', request.payload));
+                    return Boom.badData('Malformed POST data for URL', request.payload);
                 }
             }
         });
@@ -218,9 +254,11 @@ module.exports = {
         admin_server.route({
             method: "DELETE",
             path: "/api/url/{name*}",
-            handler: function(request, reply) {
-                database.deleteUrl(request.params.name, function(err) {
-                    reply(apiMessageResponse(err, "URL deleted OK"));
+            handler: function(request, h) {
+                return new Promise(function(resolve, reject) {
+                    database.deleteUrl(request.params.name, function(err) {
+                        resolve(apiMessageResponse(err, "URL deleted OK"));
+                    });
                 });
             }
         });
@@ -232,9 +270,11 @@ module.exports = {
         admin_server.route({
             method: "GET",
             path: "/api/logs/downloads",
-            handler: function(request, reply) {
-                logger.getDownloads(function(err, downloads){
-                    reply(apiDataResponse(err, downloads));
+            handler: function(request, h) {
+                return new Promise(function(resolve, reject) {
+                    logger.getDownloads(function(err, downloads){
+                        resolve(apiDataResponse(err, downloads));
+                    });
                 });
             }
         });
@@ -242,9 +282,11 @@ module.exports = {
         admin_server.route({
             method: "GET",
             path: "/api/logs/failures",
-            handler: function(request, reply) {
-                logger.getFailures(function(err, failures){
-                    reply(apiDataResponse(err, failures));
+            handler: function(request, h) {
+                return new Promise(function(resolve, reject) {
+                    logger.getFailures(function(err, failures){
+                        resolve(apiDataResponse(err, failures));
+                    });
                 });
             }
         });
@@ -252,9 +294,11 @@ module.exports = {
         admin_server.route({
             method: "GET",
             path: "/api/logs/server",
-            handler: function(request, reply) {
-                logger.getServerEvents(function(err, serverEvents){
-                    reply(apiDataResponse(err, serverEvents));
+            handler: function(request, h) {
+                return new Promise(function(resolve, reject) {
+                    logger.getServerEvents(function(err, serverEvents){
+                        resolve(apiDataResponse(err, serverEvents));
+                    });
                 });
             }
         });

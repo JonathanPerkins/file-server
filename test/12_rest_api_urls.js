@@ -240,7 +240,7 @@ describe('REST API: urls', function() {
         it('should return 422 Unprocessable Entity error', function(done) {
             server
                 .post('/api/url/'+test_url.name)
-                .send({ banana: 'bad data' })
+                .send({ banana: JSON.stringify('bad data') })
                 .expect('Content-type', /json/)
                 .expect(422)
                 .end(function(err, res) {

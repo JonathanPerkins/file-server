@@ -31,14 +31,13 @@
 
             var gridOptions = grid_helper.getDefaultGridOptions();
             // Enable column resizing
-            gridOptions.enableColResize = true;
+            gridOptions.defaultColDef.resizable=true;
 
             // wait for the document to be loaded, otherwise
             // Angular Grid will not find the div in the document.
             document.addEventListener("DOMContentLoaded", function() {
-                grid_helper.setGridSize(30);
-                // agGridGlobalFunc is a global function
-                agGridGlobalFunc('#grid-container', gridOptions);
+                grid_helper.setGridSize(20);
+                new agGrid.Grid(document.querySelector('#grid-container'), gridOptions);
                 grid_helper.addQuickFilterListener();
                 fetchDownloads();
             });

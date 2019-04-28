@@ -12,11 +12,10 @@ server.init(config, function(err) {
     if (err) {
         console.error('Failed to configure file server: '+err);
     }
-    else {
-        server.start(function(err) {
-            if (err) {
-                console.error('Failed to start file server: '+err);
-            }
-        });
-    }
+}).then(function() {
+    server.start(function(err) {
+        if (err) {
+            console.error('Failed to start file server: '+err);
+        }
+    });
 });

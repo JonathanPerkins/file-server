@@ -19,16 +19,16 @@
             }
 
             var columnDefs = [
-                {headerName: "Category", field: "category"},
-                {headerName: "File", field: "file"},
+                {headerName: "Category", field: "message.category"},
+                {headerName: "File", field: "message.file"},
                 {headerName: "Referrer",
                     valueGetter: function(params) {
-                        return testExists(params, "data.info.referrer") ? params.data.info.referrer : '';
+                        return testExists(params, "data.message.info.referrer") ? params.data.message.info.referrer : '';
                     }
                 },
                 {headerName: "Remote",
                     valueGetter: function(params) {
-                        return testExists(params, "data.info.remote") ? params.data.info.remote : '';
+                        return testExists(params, "data.message.info.remote") ? params.data.message.info.remote : '';
                     }
                 },
                 {headerName: "Time", width: 250, suppressSizeToFit: true,
@@ -41,14 +41,13 @@
 
             var gridOptions = grid_helper.getDefaultGridOptions();
             // Enable column resizing
-            gridOptions.enableColResize = true;
+            gridOptions.defaultColDef.resizable=true;
 
             // wait for the document to be loaded, otherwise
             // Angular Grid will not find the div in the document.
             document.addEventListener("DOMContentLoaded", function() {
-                grid_helper.setGridSize(30);
-                // agGridGlobalFunc is a global function
-                agGridGlobalFunc('#grid-container', gridOptions);
+                grid_helper.setGridSize(20);
+                new agGrid.Grid(document.querySelector('#grid-container'), gridOptions);
                 grid_helper.addQuickFilterListener();
                 fetchDownloads();
             });
